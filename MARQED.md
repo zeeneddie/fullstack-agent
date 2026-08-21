@@ -13,7 +13,13 @@ wel, maar gebruikt de installatie ze niet — en dan mist de machine de
 install-reparaties uit `zeeneddie/backtalk` en het offline bord uit
 `zeeneddie/barehands`.
 
-**2. `marqed-install.sh` — één commando, geen gesprek.** Upstream
+**2. Drie scripts met dezelfde naamgeving.** `marqed-preflight.sh` (is deze
+machine er klaar voor — draait ook los via `curl`, vóór je 7 GB haalt),
+`marqed-install.sh` (installeren) en `marqed-start.sh` (starten, met de
+talk-toets uit jouw eigen config erbij). De drie stappen staan als kaart
+in [`SNELSTART.md`](./SNELSTART.md).
+
+**2b. `marqed-install.sh` — één commando, geen gesprek.** Upstream
 installeert via een conversationele wizard. Die is prettig voor een
 nieuwkomer en ongeschikt om twee machines identiek te krijgen. Dit script
 doet hetzelfde zonder vragen, met gepinde versies, en eindigt op een
@@ -46,6 +52,13 @@ sluit:
    groen leek.
 2. **de ketenpoort** (in dit script): schrijft alle vier de bustoestanden
    en een golfvorm, en controleert via HTTP dat het gezicht ze terugmeldt.
+
+Die tweede poort had zelf een gat, gevonden door hem te laten falen: als
+poort 8790 al bezet was, bond zijn eigen server niet en ondervroeg hij een
+**vreemde** server. Hij gaf toen rood, maar dat was geluk — met een
+server die dezelfde bus-map las, had hij vals groen gegeven. Nu is een
+bezette poort een harde stop, getoetst door zelf te binden (`ss` bestaat
+niet op macOS, en een controle die stil overslaat is geen controle).
 
 ## Gemeten (2026-08-21)
 
