@@ -14,6 +14,10 @@
 # wants to replace its index with a pointer.
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
+# --skip-preflight moet weg zijn vóór $1 als home-map wordt gelezen,
+# anders installeert hij in een map die "--skip-preflight" heet.
+SKIP_PREFLIGHT=0
+if [ "${1:-}" = "--skip-preflight" ]; then SKIP_PREFLIGHT=1; shift; fi
 HOME_DIR="${1:-$(dirname "$HERE")}"
 ORG=zeeneddie
 PIECES="backtalk ai-visualizer barehands"
@@ -29,19 +33,23 @@ SOURCE="${MARQED_SOURCE:-https://github.com/$ORG}"
 say() { printf '\n== %s\n' "$*"; }
 fail() { printf '\n!! %s\n' "$*" >&2; exit 1; }
 
+# --- preflight: alles wat de machine moet hebben, vóór de eerste byte ---
+# Aparte stap zodat je hem ook los kunt draaien (of via curl) voordat je
+# 7 GB gaat halen. --skip-preflight slaat hem over; dan is de uitkomst
+# jouw verantwoordelijkheid.
+if [ "$SKIP_PREFLIGHT" = 1 ]; then
+  echo "-- preflight overgeslagen op verzoek"
+elif [ -x "$HERE/marqed-preflight.sh" ]; then
+  "$HERE/marqed-preflight.sh" || fail "preflight gaf rood — hierboven staat waarom. Los dat eerst op."
+else
+  echo "-- geen marqed-preflight.sh gevonden; alleen de harde eisen worden getoetst"
+  command -v git >/dev/null     || fail "git ontbreekt"
+  command -v python3 >/dev/null || fail "python3 ontbreekt"
+  command -v claude >/dev/null  || fail "Claude Code (claude) ontbreekt — de stem draait erop"
+fi
+
 say "home: $HOME_DIR"
 mkdir -p "$HOME_DIR"
-
-# --- prerequisites, stated before anything is downloaded ---
-command -v git >/dev/null   || fail "git ontbreekt"
-command -v python3 >/dev/null || fail "python3 ontbreekt"
-command -v claude >/dev/null || fail "Claude Code (claude) ontbreekt — de stem draait erop"
-if command -v nvidia-smi >/dev/null 2>&1; then
-  echo "   GPU: $(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader | head -1)"
-  echo "   (driver < 580 laat torch's CUDA 13 vallen; de ears vallen dan terug op CPU en blijven werken)"
-else
-  echo "   geen NVIDIA-kaart gevonden — alles draait op CPU (spraakherkenning ~4x trager, verder gelijk)"
-fi
 
 # --- the pieces, from our forks ---
 for p in $PIECES; do
@@ -122,9 +130,42 @@ PY
 # backtalk proved its own half. This proves the seam: the voice writes
 # state files, and the face actually reports them back over HTTP.
 say "de keten toetsen (stem schrijft, gezicht leest)"
-( cd "$HOME_DIR/ai-visualizer" && python3 server.py --no-open >/tmp/marqed-viz.log 2>&1 & echo $! > /tmp/marqed-viz.pid )
-sleep 3
-python3 - "$HOME_DIR" <<'PY' || { kill "$(cat /tmp/marqed-viz.pid)" 2>/dev/null; exit 1; }
+VIZ_PORT=8790
+VIZ_LOG="$HOME_DIR/keten-gate.log"
+# EERST: is die poort al bezet? Zo ja, dan bindt onze server niet en
+# ondervraagt de toets hieronder een VREEMDE server — die kan een andere
+# bus-map lezen en dus vals groen geven. Gemeten: precies dat gebeurde,
+# en alleen omdat de vreemde server toevallig een andere bus las viel het
+# op. Een bezette poort is daarom een harde stop, geen waarschuwing.
+# Zelf proberen te binden is de enige platformonafhankelijke toets:
+# `ss` bestaat niet op macOS, en een controle die stil overslaat is geen
+# controle. Precies dat gebeurde in de eerste versie hiervan.
+if ! python3 - "$VIZ_PORT" <<'PYPORT' 2>/dev/null
+import socket, sys
+s = socket.socket()
+try:
+    s.bind(("127.0.0.1", int(sys.argv[1])))
+except OSError:
+    sys.exit(1)
+finally:
+    s.close()
+PYPORT
+then
+  fail "poort $VIZ_PORT is al bezet — de ketenpoort zou een VREEMDE server meten
+   en kan dan vals groen geven. Stop wat daar draait en draai dit opnieuw:
+     linux:  ss -ltnp | grep :$VIZ_PORT
+     macos:  lsof -nP -iTCP:$VIZ_PORT -sTCP:LISTEN"
+fi
+( cd "$HOME_DIR/ai-visualizer" && python3 server.py --no-open >"$VIZ_LOG" 2>&1 & echo $! > /tmp/marqed-viz.pid )
+VIZ_PID="$(cat /tmp/marqed-viz.pid)"
+# wacht tot ONZE server antwoordt, en stop als hij onderweg sterft
+for _ in $(seq 1 20); do
+  kill -0 "$VIZ_PID" 2>/dev/null || fail "het gezicht startte niet — zie $VIZ_LOG"
+  curl -fsS --max-time 2 -o /dev/null "http://127.0.0.1:$VIZ_PORT/state" 2>/dev/null && break
+  sleep 0.5
+done
+kill -0 "$VIZ_PID" 2>/dev/null || fail "het gezicht startte niet — zie $VIZ_LOG"
+python3 - "$HOME_DIR" <<'PY' || { kill "$VIZ_PID" 2>/dev/null; exit 1; }
 import json, os, sys, time, urllib.request
 home = sys.argv[1]
 bus = os.path.join(home, "backtalk")
@@ -155,7 +196,8 @@ if bad:
     sys.exit(1)
 print("   KETEN GESLOTEN: het gezicht volgt de stem.")
 PY
-kill "$(cat /tmp/marqed-viz.pid)" 2>/dev/null || true
+kill "$VIZ_PID" 2>/dev/null || true
+rm -f /tmp/marqed-viz.pid
 
 say "klaar — en geverifieerd"
 cat <<TXT
