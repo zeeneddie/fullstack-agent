@@ -32,13 +32,13 @@ You need [Claude Code](https://jaredrhod.com/start) with a Claude subscription. 
 Mac and Linux:
 
 ```
-mkdir -p ~/my-agent && cd ~/my-agent && git clone https://github.com/jaredrhod/fullstack-agent && cd fullstack-agent && claude "set me up"
+mkdir -p ~/my-agent && cd ~/my-agent && git clone https://github.com/zeeneddie/fullstack-agent && cd fullstack-agent && claude "set me up"
 ```
 
 Windows (PowerShell):
 
 ```
-mkdir $HOME\my-agent; cd $HOME\my-agent; Invoke-WebRequest https://github.com/jaredrhod/fullstack-agent/archive/refs/heads/main.zip -OutFile fsa.zip; Expand-Archive fsa.zip .; Rename-Item fullstack-agent-main fullstack-agent; Remove-Item fsa.zip; cd fullstack-agent; claude "set me up"
+mkdir $HOME\my-agent; cd $HOME\my-agent; Invoke-WebRequest https://github.com/zeeneddie/fullstack-agent/archive/refs/heads/main.zip -OutFile fsa.zip; Expand-Archive fsa.zip .; Rename-Item fullstack-agent-main fullstack-agent; Remove-Item fsa.zip; cd fullstack-agent; claude "set me up"
 ```
 
 (The Windows command downloads the toolbox as a zip on purpose, so it works on a machine with no git installed. The installer sets up git for you during setup.)

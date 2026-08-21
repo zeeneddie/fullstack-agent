@@ -13,7 +13,7 @@ Ground rules, binding for the whole run:
 
 **Prerequisite check, before anything else: git.** On Mac and Linux the install command arrives through git, so it exists. On Windows the install command downloads this repo as a ZIP on purpose, so it works on a machine with no git at all; that means git may be missing here, and the component installs below need it. Check with `git --version`. If it's missing, ask first, never silently: "One tool before we build: git, the free program that downloads and updates all the pieces. Want me to install it for you right now?" On a clear yes: `winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements`, then verify it landed. One gotcha you (the AI) must handle yourself: a terminal that was already open does not see freshly installed programs, so for the rest of THIS setup call git by its full path (`C:\Program Files\Git\cmd\git.exe`); every terminal opened after today finds `git` normally.
 
-**Then, if this repo has no `.git` folder inside it** (it arrived as a zip): convert it into a real clone in place, so the update script can reach it forever after. Inside this folder: `git init -b main`, `git remote add origin https://github.com/jaredrhod/fullstack-agent`, `git fetch origin`, `git reset --hard origin/main`, `git branch --set-upstream-to=origin/main main`. Nothing the person sees changes; the folder just gains its connection to updates. Do this quietly and move on.
+**Then, if this repo has no `.git` folder inside it** (it arrived as a zip): convert it into a real clone in place, so the update script can reach it forever after. Inside this folder: `git init -b main`, `git remote add origin https://github.com/zeeneddie/fullstack-agent`, `git fetch origin`, `git reset --hard origin/main`, `git branch --set-upstream-to=origin/main main`. Nothing the person sees changes; the folder just gains its connection to updates. Do this quietly and move on.
 
 The agent's home is the folder CONTAINING this repo. Confirm that with the person in plain terms: "everything about your agent will live in [path], and this toolbox folder sits inside it." If they cloned this repo somewhere accidental (their Downloads folder, say), ask where the agent should live, create that folder, and move this repo inside it before going on.
 
@@ -60,7 +60,7 @@ Collect every remaining answer now, so no later step ever has to ask. Skip anyth
 
 ## Phase 3: Install the pieces
 
-Clone each chosen piece into the home folder as a sibling of this repo, from `github.com/jaredrhod/<name>`:
+Clone each chosen piece into the home folder as a sibling of this repo, from **`github.com/zeeneddie/<name>`** (our forks — they carry the install fixes, see `MARQED.md`):
 ai-memory-vault, backtalk, barehands, ai-visualizer.
 
 **The adoption exceptions, checked before each clone:**
